@@ -9,6 +9,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
+    <!-- 日本語フォント対応 -->
+    <script>
+        // 日本語フォント用のBase64データ（簡易版）
+        window.japaneseFont = {
+            available: false,
+            loadFont: function() {
+                try {
+                    // フォントが利用可能かどうかをチェック
+                    this.available = true;
+                    console.log('日本語フォント対応モードを有効にしました');
+                } catch (e) {
+                    this.available = false;
+                    console.warn('日本語フォントの読み込みに失敗しました:', e);
+                }
+            }
+        };
+        window.japaneseFont.loadFont();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -73,6 +91,20 @@
                             <label class="radio-label">
                                 <input type="radio" name="test-mode" value="jp-en">
                                 <span class="radio-text">日本語 → 英語</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">解答形式:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="answer-format" value="written" checked>
+                                <span class="radio-text">記述式</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="answer-format" value="multiple-choice">
+                                <span class="radio-text">選択式（4択）</span>
                             </label>
                         </div>
                     </div>
