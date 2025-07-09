@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>単語テストアプリ</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 必要なライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 単語テストアプリ</h1>
+        </header>
+        
+        <main>
+            <div id="setup-screen" class="screen">
+                <h2>単語を追加</h2>
+                
+                <!-- Excel読み込み機能 -->
+                <div class="excel-import-section">
+                    <h3>📊 Excelファイルから読み込み</h3>
+                    <div class="file-input-container">
+                        <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+                        <button id="excel-import-btn" class="import-btn">📁 Excelファイルを選択</button>
+                        <div class="file-status" id="file-status" style="display: none;">
+                            <span id="file-name" class="file-name-display"></span>
+                            <button id="clear-file-btn" class="clear-file-btn" title="ファイル選択を解除">×</button>
+                        </div>
+                    </div>
+                    <div class="excel-info">
+                        <p>💡 Excelファイルの形式：A列に英単語、B列に日本語の意味</p>
+                    </div>
+                </div>
+                
+                <!-- 単語数表示 -->
+                <div class="word-count-section">
+                    <h3>📚 読み込み済み単語数: <span id="word-count">0</span>語</h3>
+                </div>
+                
+                <!-- テスト設定 -->
+                <div class="test-settings-section">
+                    <h3>⚙️ テスト設定</h3>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">出題数:</label>
+                        <div class="number-input-container">
+                            <input type="number" id="question-count" min="1" max="100" value="10">
+                            <span class="input-unit">問</span>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">出題範囲:</label>
+                        <div class="range-input-container">
+                            <input type="number" id="range-start" min="1" value="1" placeholder="開始">
+                            <span class="range-separator">〜</span>
+                            <input type="number" id="range-end" min="1" value="20" placeholder="終了">
+                            <span class="input-unit">番目まで</span>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">テストモード:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="test-mode" value="en-jp" checked>
+                                <span class="radio-text">英語 → 日本語</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="test-mode" value="jp-en">
+                                <span class="radio-text">日本語 → 英語</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="test-controls">
+                    <div class="control-buttons">
+                        <button id="export-pdf-btn" disabled>📄 PDFでエクスポート</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
