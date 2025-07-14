@@ -24,6 +24,9 @@ class WordTestApp {
         this.clearFileBtn = document.getElementById('clear-file-btn');
         this.wordCount = document.getElementById('word-count');
         this.exportPdfBtn = document.getElementById('export-pdf-btn');
+        this.exportHtml2PdfBtn = document.getElementById('export-html2pdf-btn');
+        this.previewTestBtn = document.getElementById('preview-test-btn');
+        this.previewAndPdfBtn = document.getElementById('preview-and-pdf-btn');
         
         // テスト設定要素
         this.questionCountInput = document.getElementById('question-count');
@@ -36,6 +39,9 @@ class WordTestApp {
         this.excelFileInput.addEventListener('change', (e) => this.handleExcelFile(e));
         this.clearFileBtn.addEventListener('click', () => this.clearFileSelection());
         this.exportPdfBtn.addEventListener('click', () => this.exportToPDF());
+        this.exportHtml2PdfBtn.addEventListener('click', () => this.exportToHTML2PDF());
+        this.previewTestBtn.addEventListener('click', () => this.previewTestInNewTab());
+        this.previewAndPdfBtn.addEventListener('click', () => this.previewAndDownloadPDF());
         
         // テストモード選択
         const testModeRadios = document.querySelectorAll('input[name="test-mode"]');
@@ -74,7 +80,11 @@ class WordTestApp {
     
     updateWordList() {
         this.wordCount.textContent = this.words.length;
-        this.exportPdfBtn.disabled = this.words.length === 0;
+        const hasWords = this.words.length > 0;
+        this.exportPdfBtn.disabled = !hasWords;
+        this.exportHtml2PdfBtn.disabled = !hasWords;
+        this.previewTestBtn.disabled = !hasWords;
+        this.previewAndPdfBtn.disabled = !hasWords;
         this.updateRangeEnd();
         
         // ファイル選択状態の初期化
@@ -157,8 +167,8 @@ class WordTestApp {
             resultItem.className = `result-item ${result.isCorrect ? 'correct' : 'incorrect'}`;
             
             const questionDisplay = result.testMode === 'en-jp' ? 
-                `${result.word} → ${result.meaning}` : 
-                `${result.meaning} → ${result.word}`;
+                `${result.word} => ${result.meaning}` : 
+                `${result.meaning} => ${result.word}`;
             
             resultItem.innerHTML = `
                 <div>
@@ -290,14 +300,14 @@ class WordTestApp {
                 questionData = selectedWords.map((wordObj, index) => [
                     `${index + 1}`,
                     this.safeTextForPDF(wordObj.word),
-                    '→',
+                    '=>',
                     '_______________'
                 ]);
             } else {
                 questionData = selectedWords.map((wordObj, index) => [
                     `${index + 1}`,
                     this.safeTextForPDF(wordObj.meaning),
-                    '→',
+                    '=>',
                     '_______________'
                 ]);
             }
@@ -377,16 +387,18 @@ class WordTestApp {
                     const choiceLabel = String.fromCharCode(65 + choiceIndex); // A, B, C, D
                     let choiceText = `  ${choiceLabel}. ${this.safeTextForPDF(choice)}`;
                     
-                    if (this.testMode === 'en-jp' && /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(choice)) {
+                    // 日本語が含まれている場合はローマ字も併記
+                    if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(choice)) {
                         const romajiText = this.toRomaji(choice);
                         if (romajiText !== choice) {
-                            choiceText += ` (${romajiText})`;
+                            choiceText = `  ${choiceLabel}. ${choice} (${romajiText})`;
                         }
                     }
                     
                     try {
                         doc.text(choiceText, 25, startY);
                     } catch (error) {
+                        console.warn('選択肢描画エラー:', error, 'choice:', choice);
                         // フォールバック
                         doc.text(`  ${choiceLabel}. [Choice ${choiceLabel}]`, 25, startY);
                     }
@@ -409,14 +421,14 @@ class WordTestApp {
                 answerData = selectedWords.map((wordObj, index) => [
                     `${index + 1}`,
                     this.safeTextForPDF(wordObj.word),
-                    '→',
+                    '=>',
                     this.safeTextForPDF(wordObj.meaning)
                 ]);
             } else {
                 answerData = selectedWords.map((wordObj, index) => [
                     `${index + 1}`,
                     this.safeTextForPDF(wordObj.meaning),
-                    '→',
+                    '=>',
                     this.safeTextForPDF(wordObj.word)
                 ]);
             }
@@ -465,18 +477,18 @@ class WordTestApp {
                 }
                 
                 doc.setFontSize(10);
-                let answerText = `${index + 1}. ${this.safeTextForPDF(question)} → ${correctLabel}. ${this.safeTextForPDF(correctAnswer)}`;
+                let answerText = `${index + 1}. ${this.safeTextForPDF(question)} => ${correctLabel}. ${this.safeTextForPDF(correctAnswer)}`;
                 
                 // 日本語の場合はローマ字も併記（改善版）
                 if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(question)) {
                     const romajiQuestion = this.toRomaji(question);
                     if (romajiQuestion !== question) {
-                        answerText = `${index + 1}. ${this.safeTextForPDF(question)} (${romajiQuestion}) → ${correctLabel}. ${this.safeTextForPDF(correctAnswer)}`;
+                        answerText = `${index + 1}. ${this.safeTextForPDF(question)} (${romajiQuestion}) => ${correctLabel}. ${this.safeTextForPDF(correctAnswer)}`;
                     }
                 } else if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(correctAnswer)) {
                     const romajiAnswer = this.toRomaji(correctAnswer);
                     if (romajiAnswer !== correctAnswer) {
-                        answerText = `${index + 1}. ${this.safeTextForPDF(question)} → ${correctLabel}. ${this.safeTextForPDF(correctAnswer)} (${romajiAnswer})`;
+                        answerText = `${index + 1}. ${this.safeTextForPDF(question)} => ${correctLabel}. ${this.safeTextForPDF(correctAnswer)} (${romajiAnswer})`;
                     }
                 }
                 
@@ -484,7 +496,7 @@ class WordTestApp {
                     doc.text(answerText, 20, startY);
                 } catch (error) {
                     // フォールバック表示
-                    doc.text(`${index + 1}. [Answer ${index + 1}] → ${correctLabel}`, 20, startY);
+                    doc.text(`${index + 1}. [Answer ${index + 1}] => ${correctLabel}`, 20, startY);
                 }
                 startY += 10;
             });
@@ -499,20 +511,161 @@ class WordTestApp {
         alert(`PDFファイル「${fileName}」を保存しました。\n出題数: ${selectedWords.length}問\n出題範囲: ${rangeStart}-${rangeEnd}番目\n解答形式: ${this.answerFormat === 'written' ? '記述式' : '選択式'}`);
     }
     
-    clearFileSelection() {
-        if (confirm('選択したファイルを解除しますか？\n読み込んだ単語データも削除されます。')) {
-            // ファイル入力をクリア
-            this.excelFileInput.value = '';
-            
-            // 単語データをクリア
-            this.words = [];
-            
-            // UIを更新
-            this.fileName.textContent = '';
-            this.fileStatus.style.display = 'none';
-            this.excelImportBtn.style.display = 'inline-block';
-            this.updateWordList();
+    // html2pdf.js を使用したPDF生成
+    async exportToHTML2PDF() {
+        if (this.words.length === 0) {
+            alert('PDFを作成するには少なくとも1つの単語を登録してください。');
+            return;
         }
+        
+        try {
+            // 設定値を取得
+            const questionCount = this.questionCount;
+            const rangeStart = this.rangeStart;
+            const rangeEnd = this.rangeEnd;
+            
+            // 出題範囲内の単語を取得
+            const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
+            
+            // 出題数に応じてランダムに選択
+            let selectedWords;
+            if (questionCount >= availableWords.length) {
+                selectedWords = availableWords;
+            } else {
+                selectedWords = [...availableWords]
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, questionCount);
+            }
+            
+            // PDFテンプレートを作成
+            this.createPDFTemplate(selectedWords);
+            
+            // Google Fontsが読み込まれるまで少し待つ
+            await this.waitForFonts();
+            
+            // html2pdf.jsの設定
+            const options = {
+                margin: 15,
+                filename: `word_test_${new Date().toISOString().slice(0, 10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true,
+                    allowTaint: false
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                }
+            };
+            
+            // PDF生成
+            const element = document.getElementById('pdf-template');
+            element.style.display = 'block'; // 一時的に表示
+            
+            await html2pdf().set(options).from(element).save();
+            
+            element.style.display = 'none'; // 再び非表示
+            
+        } catch (error) {
+            console.error('PDF生成エラー:', error);
+            alert('PDF生成中にエラーが発生しました。ブラウザのコンソールを確認してください。');
+        }
+    }
+    
+    // PDFテンプレートを動的に作成
+    createPDFTemplate(selectedWords) {
+        const template = document.getElementById('pdf-template');
+        const content = template.querySelector('.pdf-content');
+        
+        // ヘッダー情報を設定
+        const testModeEl = content.querySelector('.test-mode');
+        const testDateEl = content.querySelector('.test-date');
+        const testSettingsEl = content.querySelector('.test-settings');
+        const instructionsEl = content.querySelector('.answer-instructions');
+        
+        const testModeText = this.testMode === 'en-jp' ? '英語 → 日本語' : '日本語 → 英語';
+        const answerFormatText = this.answerFormat === 'written' ? '記述式' : '選択式（4択）';
+        
+        testModeEl.textContent = `テストモード: ${testModeText} (${answerFormatText})`;
+        testDateEl.textContent = `作成日: ${new Date().toLocaleDateString('ja-JP')}`;
+        testSettingsEl.textContent = `問題数: ${selectedWords.length}問 / 出題範囲: ${this.rangeStart}-${this.rangeEnd}番目`;
+        
+        if (this.answerFormat === 'written') {
+            instructionsEl.textContent = '各問題の答えを空欄に記入してください。';
+        } else {
+            instructionsEl.textContent = '各問題から最も適切な答えを選んでください（A、B、C、Dから選択）。';
+        }
+        
+        // 問題セクションをクリアして再生成
+        const questionsContainer = content.querySelector('.pdf-questions');
+        questionsContainer.innerHTML = '';
+        
+        // 問題を生成
+        selectedWords.forEach((wordObj, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'pdf-question';
+            
+            const questionNumber = document.createElement('div');
+            questionNumber.className = 'pdf-question-number';
+            questionNumber.textContent = `問題 ${index + 1}`;
+            
+            const questionText = document.createElement('div');
+            questionText.className = 'pdf-question-text';
+            
+            if (this.testMode === 'en-jp') {
+                questionText.textContent = wordObj.word;
+            } else {
+                questionText.textContent = wordObj.meaning;
+            }
+            
+            questionDiv.appendChild(questionNumber);
+            questionDiv.appendChild(questionText);
+            
+            if (this.answerFormat === 'written') {
+                // 記述式の場合
+                const answerSpace = document.createElement('div');
+                answerSpace.className = 'pdf-written-answer';
+                answerSpace.innerHTML = '解答: <span class="pdf-answer-space"></span>';
+                questionDiv.appendChild(answerSpace);
+            } else {
+                // 選択式の場合
+                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+                const choices = this.generateChoices(correctAnswer, this.testMode);
+                
+                const choicesContainer = document.createElement('div');
+                choicesContainer.className = 'pdf-question-choices';
+                
+                choices.forEach((choice, choiceIndex) => {
+                    const choiceDiv = document.createElement('div');
+                    choiceDiv.className = 'pdf-choice';
+                    const choiceLabel = String.fromCharCode(65 + choiceIndex); // A, B, C, D
+                    choiceDiv.textContent = `${choiceLabel}. ${choice}`;
+                    choicesContainer.appendChild(choiceDiv);
+                });
+                
+                questionDiv.appendChild(choicesContainer);
+            }
+            
+            questionsContainer.appendChild(questionDiv);
+        });
+    }
+    
+    // フォントの読み込み完了を待つ
+    waitForFonts() {
+        return new Promise((resolve) => {
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => {
+                    // 追加で少し待つ（安全のため）
+                    setTimeout(resolve, 500);
+                });
+            } else {
+                // フォールバック
+                setTimeout(resolve, 1000);
+            }
+        });
     }
     
     // 日本語テキストをPDFで安全に表示するためのヘルパー関数（改善版）
@@ -521,20 +674,9 @@ class WordTestApp {
         
         // 日本語文字が含まれている場合の処理
         if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text)) {
-            // ローマ字変換を試みる
-            const romaji = this.toRomaji(text);
-            if (romaji !== text) {
-                // ローマ字変換できた場合は、元の文字とローマ字を併記
-                return `${text} (${romaji})`;
-            } else {
-                // ローマ字変換できない場合は元の文字をそのまま返す
-                // UTF-8での出力を試みる
-                try {
-                    return decodeURIComponent(encodeURIComponent(text));
-                } catch (e) {
-                    return text;
-                }
-            }
+            // 直接日本語を返して、PDFライブラリに処理を委ねる
+            // 文字化けする場合は、呼び出し元でローマ字併記の処理を行う
+            return text;
         }
         
         // ASCII文字の場合はそのまま返す
@@ -638,6 +780,8 @@ class WordTestApp {
     }
     
     generateChoices(correctAnswer, questionType) {
+        console.log('generateChoices called:', { correctAnswer, questionType });
+        
         // 正解以外の選択肢を生成
         const otherAnswers = this.words
             .filter(word => {
@@ -645,6 +789,8 @@ class WordTestApp {
                 return answer !== correctAnswer;
             })
             .map(word => questionType === 'en-jp' ? word.meaning : word.word);
+        
+        console.log('Available other answers:', otherAnswers.slice(0, 5)); // 最初の5つを表示
         
         // ランダムに3つ選択
         const wrongChoices = [];
@@ -664,14 +810,862 @@ class WordTestApp {
         
         // 正解と間違いの選択肢を混ぜてシャッフル
         const allChoices = [correctAnswer, ...wrongChoices];
-        return allChoices.sort(() => Math.random() - 0.5);
+        const finalChoices = allChoices.sort(() => Math.random() - 0.5);
+        
+        console.log('Generated choices:', finalChoices);
+        return finalChoices;
+    }
+    
+    // 新しいタブでテストをプレビューする機能
+    previewTestInNewTab() {
+        if (this.words.length === 0) {
+            alert('プレビューするには少なくとも1つの単語を登録してください。');
+            return;
+        }
+        
+        // 設定値を取得
+        const questionCount = this.questionCount;
+        const rangeStart = this.rangeStart;
+        const rangeEnd = this.rangeEnd;
+        
+        // 出題範囲内の単語を取得
+        const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
+        
+        // 出題数に応じてランダムに選択
+        let selectedWords;
+        if (questionCount >= availableWords.length) {
+            selectedWords = availableWords;
+        } else {
+            selectedWords = [...availableWords]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, questionCount);
+        }
+        
+        // HTMLページを生成
+        const htmlContent = this.generateTestHTML(selectedWords);
+        
+        // 新しいタブで開く
+        const newTab = window.open('', '_blank');
+        newTab.document.write(htmlContent);
+        newTab.document.close();
+    }
+    
+    // プレビュー表示とPDF化を同時に実行する機能
+    previewAndDownloadPDF() {
+        if (this.words.length === 0) {
+            alert('プレビューとPDF生成するには少なくとも1つの単語を登録してください。');
+            return;
+        }
+        
+        // 設定値を取得
+        const questionCount = this.questionCount;
+        const rangeStart = this.rangeStart;
+        const rangeEnd = this.rangeEnd;
+        
+        // 出題範囲内の単語を取得
+        const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
+        
+        // 出題数に応じてランダムに選択
+        let selectedWords;
+        if (questionCount >= availableWords.length) {
+            selectedWords = availableWords;
+        } else {
+            selectedWords = [...availableWords]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, questionCount);
+        }
+        
+        // HTMLページを生成（自動PDF化機能付き）
+        const htmlContent = this.generateTestHTMLWithAutoPDF(selectedWords);
+        
+        // 新しいタブで開く
+        const newTab = window.open('', '_blank');
+        newTab.document.write(htmlContent);
+        newTab.document.close();
+        
+        // 成功メッセージ
+        alert('プレビューページを表示しました。5秒後に自動でPDFダウンロードが開始されます。');
+    }
+    
+    // テスト用のHTMLページを生成
+    generateTestHTML(selectedWords) {
+        const testModeText = this.testMode === 'en-jp' ? '英語 → 日本語' : '日本語 → 英語';
+        const answerFormatText = this.answerFormat === 'written' ? '記述式' : '選択式（4択）';
+        const now = new Date();
+        const dateString = now.toLocaleDateString('ja-JP');
+        
+        let questionsHTML = '';
+        
+        selectedWords.forEach((wordObj, index) => {
+            const question = this.testMode === 'en-jp' ? wordObj.word : wordObj.meaning;
+            
+            questionsHTML += `
+                <div class="question">
+                    <div class="question-number">問題 ${index + 1}</div>
+                    <div class="question-text">${question}</div>
+            `;
+            
+            if (this.answerFormat === 'written') {
+                // 記述式の場合
+                questionsHTML += `
+                    <div class="written-answer">
+                        解答: <span class="answer-space">_______________</span>
+                    </div>
+                `;
+            } else {
+                // 選択式の場合
+                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+                const choices = this.generateChoices(correctAnswer, this.testMode);
+                
+                questionsHTML += `<div class="question-choices">`;
+                choices.forEach((choice, choiceIndex) => {
+                    const choiceLabel = String.fromCharCode(65 + choiceIndex); // A, B, C, D
+                    questionsHTML += `
+                        <div class="choice">
+                            ${choiceLabel}. ${choice}
+                        </div>
+                    `;
+                });
+                questionsHTML += `</div>`;
+            }
+            
+            questionsHTML += `</div>`;
+        });
+        
+        // 解答ページを生成
+        let answersHTML = '';
+        selectedWords.forEach((wordObj, index) => {
+            const question = this.testMode === 'en-jp' ? wordObj.word : wordObj.meaning;
+            const answer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+            
+            if (this.answerFormat === 'written') {
+                answersHTML += `
+                    <div class="answer-item">
+                        ${index + 1}. ${question} → ${answer}
+                    </div>
+                `;
+            } else {
+                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+                const choices = this.generateChoices(correctAnswer, this.testMode);
+                const correctIndex = choices.indexOf(correctAnswer);
+                const correctLabel = String.fromCharCode(65 + correctIndex);
+                
+                answersHTML += `
+                    <div class="answer-item">
+                        ${index + 1}. ${question} → ${correctLabel}. ${answer}
+                    </div>
+                `;
+            }
+        });
+        
+        return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>単語テスト - ${testModeText}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- html2pdf.js for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .pdf-download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .pdf-download-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .test-info {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .instructions {
+            background: #e0f2fe;
+            border: 1px solid #81d4fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            color: #01579b;
+            margin-bottom: 10px;
+        }
+        
+        .question {
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .question:hover {
+            border-color: #667eea;
+        }
+        
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .written-answer {
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+        
+        .answer-space {
+            display: inline-block;
+            border-bottom: 2px solid #4a5568;
+            min-width: 200px;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+        
+        .question-choices {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .choice {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .choice:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        
+        .answers-section {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 3px solid #e2e8f0;
+        }
+        
+        .answers-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .answer-item {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .footer {
+            background: #f7fafc;
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .answers-section {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-actions">
+                <button class="pdf-download-btn" onclick="downloadAsPDF()">📄 PDFでダウンロード</button>
+            </div>
+            <h1 class="title">📚 単語テスト</h1>
+            <div class="test-info">
+                <div>テストモード: ${testModeText} (${answerFormatText})</div>
+                <div>作成日: ${dateString}</div>
+                <div>問題数: ${selectedWords.length}問 / 出題範囲: ${this.rangeStart}-${this.rangeEnd}番目</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="instructions">
+                <h3>📋 解答方法</h3>
+                <p>${this.answerFormat === 'written' ? '各問題の答えを空欄に記入してください。' : '各問題から最も適切な答えを選んでください（A、B、C、Dから選択）。'}</p>
+            </div>
+            
+            <div class="questions">
+                ${questionsHTML}
+            </div>
+        </div>
+        
+        <div class="answers-section">
+            <div class="content">
+                <h2 class="answers-title">📝 解答</h2>
+                <div class="answers">
+                    ${answersHTML}
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>English Vocabulary Test App - Generated on ${dateString}</p>
+        </div>
+    </div>
+    
+    <script>
+        // PDFダウンロード機能
+        async function downloadAsPDF() {
+            try {
+                // PDFダウンロードボタンを一時的に非表示
+                const downloadBtn = document.querySelector('.pdf-download-btn');
+                const originalDisplay = downloadBtn.style.display;
+                downloadBtn.style.display = 'none';
+                
+                // PDF生成設定
+                const options = {
+                    margin: 10,
+                    filename: 'vocabulary-test-${new Date().toISOString().slice(0, 10)}.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { 
+                        scale: 2,
+                        useCORS: true,
+                        letterRendering: true,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'portrait' 
+                    }
+                };
+                
+                // PDF生成とダウンロード
+                const element = document.querySelector('.container');
+                await html2pdf().set(options).from(element).save();
+                
+                // ボタンを元に戻す
+                downloadBtn.style.display = originalDisplay;
+                
+                alert('PDFのダウンロードが完了しました！');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                alert('PDF生成中にエラーが発生しました。ブラウザのコンソールを確認してください。');
+                
+                // ボタンを元に戻す
+                const downloadBtn = document.querySelector('.pdf-download-btn');
+                if (downloadBtn) downloadBtn.style.display = originalDisplay;
+            }
+        }
+        
+        // ページ読み込み完了時にメッセージ表示
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('単語テストページが読み込まれました');
+            console.log('右上の「PDFでダウンロード」ボタンでPDF化できます');
+        });
+    </script>
+</body>
+</html>
+        `;
+    }
+    
+    // 自動PDF化機能付きのテスト用HTMLページを生成
+    generateTestHTMLWithAutoPDF(selectedWords) {
+        const testModeText = this.testMode === 'en-jp' ? '英語 → 日本語' : '日本語 → 英語';
+        const answerFormatText = this.answerFormat === 'written' ? '記述式' : '選択式（4択）';
+        const now = new Date();
+        const dateString = now.toLocaleDateString('ja-JP');
+        
+        let questionsHTML = '';
+        
+        selectedWords.forEach((wordObj, index) => {
+            const question = this.testMode === 'en-jp' ? wordObj.word : wordObj.meaning;
+            
+            questionsHTML += `
+                <div class="question">
+                    <div class="question-number">問題 ${index + 1}</div>
+                    <div class="question-text">${question}</div>
+            `;
+            
+            if (this.answerFormat === 'written') {
+                // 記述式の場合
+                questionsHTML += `
+                    <div class="written-answer">
+                        解答: <span class="answer-space">_______________</span>
+                    </div>
+                `;
+            } else {
+                // 選択式の場合
+                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+                const choices = this.generateChoices(correctAnswer, this.testMode);
+                
+                questionsHTML += `<div class="question-choices">`;
+                choices.forEach((choice, choiceIndex) => {
+                    const choiceLabel = String.fromCharCode(65 + choiceIndex); // A, B, C, D
+                    questionsHTML += `
+                        <div class="choice">
+                            ${choiceLabel}. ${choice}
+                        </div>
+                    `;
+                });
+                questionsHTML += `</div>`;
+            }
+            
+            questionsHTML += `</div>`;
+        });
+        
+        // 解答ページを生成
+        let answersHTML = '';
+        selectedWords.forEach((wordObj, index) => {
+            const question = this.testMode === 'en-jp' ? wordObj.word : wordObj.meaning;
+            const answer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+            
+            if (this.answerFormat === 'written') {
+                answersHTML += `
+                    <div class="answer-item">
+                        ${index + 1}. ${question} → ${answer}
+                    </div>
+                `;
+            } else {
+                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
+                const choices = this.generateChoices(correctAnswer, this.testMode);
+                const correctIndex = choices.indexOf(correctAnswer);
+                const correctLabel = String.fromCharCode(65 + correctIndex);
+                
+                answersHTML += `
+                    <div class="answer-item">
+                        ${index + 1}. ${question} → ${correctLabel}. ${answer}
+                    </div>
+                `;
+            }
+        });
+        
+        return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>単語テスト - ${testModeText}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- html2pdf.js for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .pdf-download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .pdf-download-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .auto-download-notice {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .test-info {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .instructions {
+            background: #e0f2fe;
+            border: 1px solid #81d4fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            color: #01579b;
+            margin-bottom: 10px;
+        }
+        
+        .question {
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .question:hover {
+            border-color: #667eea;
+        }
+        
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .written-answer {
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+        
+        .answer-space {
+            display: inline-block;
+            border-bottom: 2px solid #4a5568;
+            min-width: 200px;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+        
+        .question-choices {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .choice {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .choice:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        
+        .answers-section {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 3px solid #e2e8f0;
+        }
+        
+        .answers-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .answer-item {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .footer {
+            background: #f7fafc;
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .answers-section {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-actions">
+                <button class="pdf-download-btn" onclick="downloadAsPDF()">📄 PDFでダウンロード</button>
+            </div>
+            <h1 class="title">📚 単語テスト</h1>
+            <div class="test-info">
+                <div>テストモード: ${testModeText} (${answerFormatText})</div>
+                <div>作成日: ${dateString}</div>
+                <div>問題数: ${selectedWords.length}問 / 出題範囲: ${this.rangeStart}-${this.rangeEnd}番目</div>
+            </div>
+            <div class="auto-download-notice">
+                🔄 自動でPDFダウンロードを開始中...
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="instructions">
+                <h3>📋 解答方法</h3>
+                <p>${this.answerFormat === 'written' ? '各問題の答えを空欄に記入してください。' : '各問題から最も適切な答えを選んでください（A、B、C、Dから選択）。'}</p>
+            </div>
+            
+            <div class="questions">
+                ${questionsHTML}
+            </div>
+        </div>
+        
+        <div class="answers-section">
+            <div class="content">
+                <h2 class="answers-title">📝 解答</h2>
+                <div class="answers">
+                    ${answersHTML}
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>English Vocabulary Test App - Generated on ${dateString}</p>
+        </div>
+    </div>
+    
+    <script>
+        // PDFダウンロード機能
+        async function downloadAsPDF() {
+            try {
+                // PDFダウンロードボタンと通知を一時的に非表示
+                const downloadBtn = document.querySelector('.pdf-download-btn');
+                const notice = document.querySelector('.auto-download-notice');
+                const originalDisplayBtn = downloadBtn.style.display;
+                const originalDisplayNotice = notice.style.display;
+                downloadBtn.style.display = 'none';
+                notice.style.display = 'none';
+                
+                // PDF生成設定
+                const options = {
+                    margin: 10,
+                    filename: 'vocabulary-test-${new Date().toISOString().slice(0, 10)}.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { 
+                        scale: 2,
+                        useCORS: true,
+                        letterRendering: true,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'portrait' 
+                    }
+                };
+                
+                // PDF生成とダウンロード
+                const element = document.querySelector('.container');
+                await html2pdf().set(options).from(element).save();
+                
+                // ボタンと通知を元に戻す
+                downloadBtn.style.display = originalDisplayBtn;
+                notice.style.display = originalDisplayNotice;
+                notice.innerHTML = '✅ PDFダウンロードが完了しました！';
+                notice.style.background = 'rgba(72, 187, 120, 0.2)';
+                notice.style.borderColor = 'rgba(72, 187, 120, 0.3)';
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                const notice = document.querySelector('.auto-download-notice');
+                notice.innerHTML = '❌ PDF生成中にエラーが発生しました';
+                notice.style.background = 'rgba(245, 101, 101, 0.2)';
+                notice.style.borderColor = 'rgba(245, 101, 101, 0.3)';
+                
+                // ボタンを元に戻す
+                const downloadBtn = document.querySelector('.pdf-download-btn');
+                if (downloadBtn) downloadBtn.style.display = originalDisplayBtn;
+            }
+        }
+        
+        // ページ読み込み完了時に自動PDF生成
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('単語テストページが読み込まれました（自動PDF化モード）');
+            
+            // すぐに自動でPDF生成を開始
+            setTimeout(() => {
+                downloadAsPDF();
+            }, 100); // わずかな遅延でDOM安定化を待つ
+        });
+    </script>
+</body>
+</html>
+        `;
     }
 }
 
 // アプリケーションの初期化
 const app = new WordTestApp();
 
-// ページ読み込み時にセットアップ画面を表示
+// ページ読み込み時の初期化
 document.addEventListener('DOMContentLoaded', () => {
-    app.showSetupScreen();
+    // 初期化完了
+    console.log('単語テストアプリが初期化されました');
 });
