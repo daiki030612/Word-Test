@@ -14,9 +14,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- jsPDFも保持（既存機能のため） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
     <!-- 日本語フォント対応 -->
     <script>
         // 日本語フォント用のBase64データ（簡易版）
@@ -120,7 +117,6 @@
                 
                 <div class="test-controls">
                     <div class="control-buttons">
-                        <button id="export-pdf-btn" disabled>📄 PDFでエクスポート（jsPDF）</button>
                         <button id="export-html2pdf-btn" disabled>📄 PDFでエクスポート（html2pdf）</button>
                         <button id="preview-test-btn" disabled>👀 テストをプレビュー（別タブ）</button>
                         <button id="preview-and-pdf-btn" disabled>🔄 プレビュー＋PDF化（同時）</button>
