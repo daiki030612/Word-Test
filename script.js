@@ -23,7 +23,6 @@ class WordTestApp {
         this.fileStatus = document.getElementById('file-status');
         this.clearFileBtn = document.getElementById('clear-file-btn');
         this.wordCount = document.getElementById('word-count');
-        this.exportHtml2PdfBtn = document.getElementById('export-html2pdf-btn');
         this.previewTestBtn = document.getElementById('preview-test-btn');
         this.previewAndPdfBtn = document.getElementById('preview-and-pdf-btn');
         
@@ -37,7 +36,6 @@ class WordTestApp {
         this.excelImportBtn.addEventListener('click', () => this.excelFileInput.click());
         this.excelFileInput.addEventListener('change', (e) => this.handleExcelFile(e));
         this.clearFileBtn.addEventListener('click', () => this.clearFileSelection());
-        this.exportHtml2PdfBtn.addEventListener('click', () => this.exportToHTML2PDF());
         this.previewTestBtn.addEventListener('click', () => this.previewTestInNewTab());
         this.previewAndPdfBtn.addEventListener('click', () => this.previewAndDownloadPDF());
         
@@ -73,26 +71,20 @@ class WordTestApp {
             this.validateRange();
         });
     }
-    
-    // 手動入力機能は削除（Excelファイルのデータのみ使用）
-    
+
     updateWordList() {
         this.wordCount.textContent = this.words.length;
         const hasWords = this.words.length > 0;
-        this.exportHtml2PdfBtn.disabled = !hasWords;
         this.previewTestBtn.disabled = !hasWords;
         this.previewAndPdfBtn.disabled = !hasWords;
         this.updateRangeEnd();
         
-        // ファイル選択状態の初期化
         if (this.words.length === 0) {
             this.fileStatus.style.display = 'none';
             this.excelImportBtn.style.display = 'inline-block';
         }
     }
-    
-    // データ削除機能は削除（Excelファイルのデータのみ使用）
-    
+
     updateRangeEnd() {
         this.rangeEndInput.max = this.words.length;
         if (this.rangeEnd > this.words.length) {
@@ -128,61 +120,13 @@ class WordTestApp {
         }
         this.questionCountInput.max = availableWords;
     }
-    
-    // データ削除機能は削除（Excelファイルのデータのみ使用）
-    
-    // テスト機能は削除
-    
-    // テスト機能は削除
-    
-    // テスト機能は削除
-    
-    // テスト機能は削除
-    
-    nextQuestion() {
-        this.currentQuestionIndex++;
-        
-        if (this.currentQuestionIndex >= this.currentTest.length) {
-            this.showResults();
-        } else {
-            this.showQuestion();
-        }
+
+    clearFileSelection() {
+        this.excelFileInput.value = '';
+        this.words = [];
+        this.updateWordList();
     }
-    
-    showResults() {
-        const correctCount = this.testResults.filter(r => r.isCorrect).length;
-        const totalCount = this.testResults.length;
-        const percentage = Math.round((correctCount / totalCount) * 100);
-        
-        this.score.textContent = correctCount;
-        this.total.textContent = totalCount;
-        this.percentage.textContent = percentage;
-        
-        this.resultList.innerHTML = '';
-        this.testResults.forEach(result => {
-            const resultItem = document.createElement('div');
-            resultItem.className = `result-item ${result.isCorrect ? 'correct' : 'incorrect'}`;
-            
-            const questionDisplay = result.testMode === 'en-jp' ? 
-                `${result.word} => ${result.meaning}` : 
-                `${result.meaning} => ${result.word}`;
-            
-            resultItem.innerHTML = `
-                <div>
-                    <div class="result-word">${questionDisplay}</div>
-                    <div class="result-answer">あなたの答え: ${result.userAnswer}</div>
-                    ${!result.isCorrect ? `<div class="result-answer">正解: ${result.correctAnswer}</div>` : ''}
-                </div>
-                <div class="result-status">${result.isCorrect ? '正解' : '不正解'}</div>
-            `;
-            this.resultList.appendChild(resultItem);
-        });
-        
-        this.showResultScreen();
-    }
-    
-    // ローカルストレージ機能は削除（Excelファイルのデータのみ使用）
-    
+
     handleExcelFile(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -211,11 +155,8 @@ class WordTestApp {
     
     importWordsFromExcel(data) {
         let importedCount = 0;
-        
-        // 既存データをクリア（Excelファイルのデータのみ使用）
         this.words = [];
         
-        // データの行をループ（最初の行はヘッダーの場合があるのでスキップ）
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             if (row.length >= 2 && row[0] && row[1]) {
@@ -228,171 +169,10 @@ class WordTestApp {
         }
         
         this.updateWordList();
-        
-        let message = `${importedCount}個の単語を読み込みました。`;
-        alert(message);
+        alert(`${importedCount}個の単語を読み込みました。`);
     }
-    
-    // html2pdf.js を使用したPDF生成
-    async exportToHTML2PDF() {
-        if (this.words.length === 0) {
-            alert('PDFを作成するには少なくとも1つの単語を登録してください。');
-            return;
-        }
-        
-        try {
-            // 設定値を取得
-            const questionCount = this.questionCount;
-            const rangeStart = this.rangeStart;
-            const rangeEnd = this.rangeEnd;
-            
-            // 出題範囲内の単語を取得
-            const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
-            
-            // 出題数に応じてランダムに選択
-            let selectedWords;
-            if (questionCount >= availableWords.length) {
-                selectedWords = availableWords;
-            } else {
-                selectedWords = [...availableWords]
-                    .sort(() => Math.random() - 0.5)
-                    .slice(0, questionCount);
-            }
-            
-            // PDFテンプレートを作成
-            this.createPDFTemplate(selectedWords);
-            
-            // Google Fontsが読み込まれるまで少し待つ
-            await this.waitForFonts();
-            
-            // html2pdf.jsの設定
-            const options = {
-                margin: 15,
-                filename: `word_test_${new Date().toISOString().slice(0, 10)}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2,
-                    useCORS: true,
-                    letterRendering: true,
-                    allowTaint: false
-                }
-            };
-            
-            // PDF生成
-            const element = document.getElementById('pdf-template');
-            element.style.display = 'block'; // 一時的に表示
-            
-            await html2pdf().set(options).from(element).save();
-            
-            element.style.display = 'none'; // 再び非表示
-            
-        } catch (error) {
-            console.error('PDF生成エラー:', error);
-            alert('PDF生成中にエラーが発生しました。ブラウザのコンソールを確認してください。');
-        }
-    }
-    
-    // PDFテンプレートを動的に作成
-    createPDFTemplate(selectedWords) {
-        const template = document.getElementById('pdf-template');
-        const content = template.querySelector('.pdf-content');
-        
-        // ヘッダー情報を設定
-        const testModeEl = content.querySelector('.test-mode');
-        const testDateEl = content.querySelector('.test-date');
-        const testSettingsEl = content.querySelector('.test-settings');
-        const instructionsEl = content.querySelector('.answer-instructions');
-        
-        const testModeText = this.testMode === 'en-jp' ? '英語 → 日本語' : '日本語 → 英語';
-        const answerFormatText = this.answerFormat === 'written' ? '記述式' : '選択式（4択）';
-        
-        testModeEl.textContent = `テストモード: ${testModeText} (${answerFormatText})`;
-        testDateEl.textContent = `作成日: ${new Date().toLocaleDateString('ja-JP')}`;
-        testSettingsEl.textContent = `問題数: ${selectedWords.length}問 / 出題範囲: ${this.rangeStart}-${this.rangeEnd}番目`;
-        
-        if (this.answerFormat === 'written') {
-            instructionsEl.textContent = '各問題の答えを空欄に記入してください。';
-        } else {
-            instructionsEl.textContent = '各問題から最も適切な答えを選んでください（A、B、C、Dから選択）。';
-        }
-        
-        // 問題セクションをクリアして再生成
-        const questionsContainer = content.querySelector('.pdf-questions');
-        questionsContainer.innerHTML = '';
-        
-        // 問題を生成
-        selectedWords.forEach((wordObj, index) => {
-            const questionDiv = document.createElement('div');
-            questionDiv.className = 'pdf-question';
-            
-            const questionNumber = document.createElement('div');
-            questionNumber.className = 'pdf-question-number';
-            questionNumber.textContent = `問題 ${index + 1}`;
-            
-            const questionText = document.createElement('div');
-            questionText.className = 'pdf-question-text';
-            
-            if (this.testMode === 'en-jp') {
-                questionText.textContent = wordObj.word;
-            } else {
-                questionText.textContent = wordObj.meaning;
-            }
-            
-            questionDiv.appendChild(questionNumber);
-            questionDiv.appendChild(questionText);
-            
-            if (this.answerFormat === 'written') {
-                // 記述式の場合
-                const answerSpace = document.createElement('div');
-                answerSpace.className = 'pdf-written-answer';
-                answerSpace.innerHTML = '解答: <span class="pdf-answer-space"></span>';
-                questionDiv.appendChild(answerSpace);
-            } else {
-                // 選択式の場合
-                const correctAnswer = this.testMode === 'en-jp' ? wordObj.meaning : wordObj.word;
-                const choices = this.generateChoices(correctAnswer, this.testMode);
-                
-                const choicesContainer = document.createElement('div');
-                choicesContainer.className = 'pdf-question-choices';
-                
-                choices.forEach((choice, choiceIndex) => {
-                    const choiceDiv = document.createElement('div');
-                    choiceDiv.className = 'pdf-choice';
-                    const choiceLabel = String.fromCharCode(65 + choiceIndex); // A, B, C, D
-                    choiceDiv.textContent = `${choiceLabel}. ${choice}`;
-                    choicesContainer.appendChild(choiceDiv);
-                });
-                
-                questionDiv.appendChild(choicesContainer);
-            }
-            
-            questionsContainer.appendChild(questionDiv);
-        });
-    }
-    
-    // フォントの読み込み完了を待つ
-    waitForFonts() {
-        return new Promise((resolve) => {
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(() => {
-                    // 追加で少し待つ（安全のため）
-                    setTimeout(resolve, 500);
-                });
-            } else {
-                // フォールバック
-                setTimeout(resolve, 1000);
-            }
-        });
-    }
-    
 
-    
-
-    
     generateChoices(correctAnswer, questionType) {
-        console.log('generateChoices called:', { correctAnswer, questionType });
-        
-        // 正解以外の選択肢を生成
         const otherAnswers = this.words
             .filter(word => {
                 const answer = questionType === 'en-jp' ? word.meaning : word.word;
@@ -400,16 +180,12 @@ class WordTestApp {
             })
             .map(word => questionType === 'en-jp' ? word.meaning : word.word);
         
-        console.log('Available other answers:', otherAnswers.slice(0, 5)); // 最初の5つを表示
-        
-        // ランダムに3つ選択
         const wrongChoices = [];
         const shuffled = [...otherAnswers].sort(() => Math.random() - 0.5);
         for (let i = 0; i < Math.min(3, shuffled.length); i++) {
             wrongChoices.push(shuffled[i]);
         }
         
-        // 足りない場合はダミーの選択肢を追加
         while (wrongChoices.length < 3) {
             if (questionType === 'en-jp') {
                 wrongChoices.push(`選択肢${wrongChoices.length + 1}`);
@@ -418,86 +194,52 @@ class WordTestApp {
             }
         }
         
-        // 正解と間違いの選択肢を混ぜてシャッフル
         const allChoices = [correctAnswer, ...wrongChoices];
-        const finalChoices = allChoices.sort(() => Math.random() - 0.5);
-        
-        console.log('Generated choices:', finalChoices);
-        return finalChoices;
+        return allChoices.sort(() => Math.random() - 0.5);
     }
-    
-    // 新しいタブでテストをプレビューする機能
+
+    getSelectedWords() {
+        const availableWords = this.words.slice(this.rangeStart - 1, this.rangeEnd);
+        
+        if (this.questionCount >= availableWords.length) {
+            return availableWords;
+        } else {
+            return [...availableWords]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, this.questionCount);
+        }
+    }
+
     previewTestInNewTab() {
         if (this.words.length === 0) {
             alert('プレビューするには少なくとも1つの単語を登録してください。');
             return;
         }
         
-        // 設定値を取得
-        const questionCount = this.questionCount;
-        const rangeStart = this.rangeStart;
-        const rangeEnd = this.rangeEnd;
-        
-        // 出題範囲内の単語を取得
-        const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
-        
-        // 出題数に応じてランダムに選択
-        let selectedWords;
-        if (questionCount >= availableWords.length) {
-            selectedWords = availableWords;
-        } else {
-            selectedWords = [...availableWords]
-                .sort(() => Math.random() - 0.5)
-                .slice(0, questionCount);
-        }
-        
-        // HTMLページを生成
+        const selectedWords = this.getSelectedWords();
         const htmlContent = this.generateTestHTML(selectedWords);
         
-        // 新しいタブで開く
         const newTab = window.open('', '_blank');
         newTab.document.write(htmlContent);
         newTab.document.close();
     }
-    
-    // プレビュー表示とPDF化を同時に実行する機能
+
     previewAndDownloadPDF() {
         if (this.words.length === 0) {
             alert('プレビューとPDF生成するには少なくとも1つの単語を登録してください。');
             return;
         }
         
-        // 設定値を取得
-        const questionCount = this.questionCount;
-        const rangeStart = this.rangeStart;
-        const rangeEnd = this.rangeEnd;
-        
-        // 出題範囲内の単語を取得
-        const availableWords = this.words.slice(rangeStart - 1, rangeEnd);
-        
-        // 出題数に応じてランダムに選択
-        let selectedWords;
-        if (questionCount >= availableWords.length) {
-            selectedWords = availableWords;
-        } else {
-            selectedWords = [...availableWords]
-                .sort(() => Math.random() - 0.5)
-                .slice(0, questionCount);
-        }
-        
-        // HTMLページを生成（自動PDF化機能付き）
+        const selectedWords = this.getSelectedWords();
         const htmlContent = this.generateTestHTMLWithAutoPDF(selectedWords);
         
-        // 新しいタブで開く
         const newTab = window.open('', '_blank');
         newTab.document.write(htmlContent);
         newTab.document.close();
         
-        // 成功メッセージ
-        alert('プレビューページを表示しました。5秒後に自動でPDFダウンロードが開始されます。');
+        alert('プレビューページを表示しました。自動でPDFダウンロードが開始されます。');
     }
-    
-    // テスト用のHTMLページを生成
+
     generateTestHTML(selectedWords) {
         const testModeText = this.testMode === 'en-jp' ? '英語 → 日本語' : '日本語 → 英語';
         const answerFormatText = this.answerFormat === 'written' ? '記述式' : '選択式（4択）';
@@ -1262,10 +1004,7 @@ class WordTestApp {
 }
 
 // アプリケーションの初期化
-const app = new WordTestApp();
-
-// ページ読み込み時の初期化
 document.addEventListener('DOMContentLoaded', () => {
-    // 初期化完了
+    const app = new WordTestApp();
     console.log('単語テストアプリが初期化されました');
 });
